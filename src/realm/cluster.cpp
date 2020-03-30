@@ -58,7 +58,7 @@ void Cluster::create(size_t nb_leaf_columns)
         auto col_ndx = col_key.get_index();
         auto type = col_key.get_type();
         auto attr = col_key.get_attrs();
-        if (attr.test(col_attr_List)) {
+        if (attr.test(col_attr_List) || attr.test(col_attr_Dictionary)) {
             ArrayRef arr(m_alloc);
             arr.create();
             arr.set_parent(this, col_ndx.val + s_first_col_index);
@@ -255,7 +255,8 @@ void Cluster::insert_row(size_t ndx, ObjKey k, const FieldValues& init_values)
             ++val;
         }
 
-        if (attr.test(col_attr_List)) {
+        auto type = col_key.get_type();
+        if (attr.test(col_attr_List) || attr.test(col_attr_Dictionary)) {
             REALM_ASSERT(init_value.is_null());
             ArrayRef arr(m_alloc);
             arr.set_parent(this, col_ndx.val + s_first_col_index);
@@ -265,7 +266,6 @@ void Cluster::insert_row(size_t ndx, ObjKey k, const FieldValues& init_values)
         }
 
         bool nullable = attr.test(col_attr_Nullable);
-        auto type = col_key.get_type();
         switch (type) {
             case col_type_Int:
                 if (attr.test(col_attr_Nullable)) {
@@ -351,7 +351,7 @@ void Cluster::move(size_t ndx, ClusterNode* new_node, int64_t offset)
         auto attr = col_key.get_attrs();
         auto type = col_key.get_type();
 
-        if (attr.test(col_attr_List)) {
+        if (attr.test(col_attr_List) || attr.test(col_attr_Dictionary)) {
             do_move<ArrayRef>(ndx, col_key, new_leaf);
             return false;
         }
@@ -418,9 +418,7 @@ void Cluster::move(size_t ndx, ClusterNode* new_node, int64_t offset)
     m_keys.truncate(ndx);
 }
 
-Cluster::~Cluster()
-{
-}
+Cluster::~Cluster() {}
 
 const Table* Cluster::get_owning_table() const
 {
@@ -474,7 +472,8 @@ inline void Cluster::do_insert_column(ColKey col_key, bool nullable)
 void Cluster::insert_column(ColKey col_key)
 {
     auto attr = col_key.get_attrs();
-    if (attr.test(col_attr_List)) {
+    auto type = col_key.get_type();
+    if (attr.test(col_attr_List) || attr.test(col_attr_Dictionary)) {
         size_t sz = node_size();
 
         ArrayRef arr(m_alloc);
@@ -488,7 +487,6 @@ void Cluster::insert_column(ColKey col_key)
         return;
     }
     bool nullable = attr.test(col_attr_Nullable);
-    auto type = col_key.get_type();
     switch (type) {
         case col_type_Int:
             if (nullable) {
@@ -723,7 +721,7 @@ size_t Cluster::erase(ObjKey key, CascadeState& state)
     auto erase_in_column = [&](ColKey col_key) {
         auto col_type = col_key.get_type();
         auto attr = col_key.get_attrs();
-        if (attr.test(col_attr_List)) {
+        if (attr.test(col_attr_List) || attr.test(col_attr_Dictionary)) {
             auto col_ndx = col_key.get_index();
             ArrayRef values(m_alloc);
             values.set_parent(this, col_ndx.val + s_first_col_index);
